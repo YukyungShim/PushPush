@@ -22,3 +22,16 @@ ON public.pushpush_leaderboard (stage_level, moves ASC, clear_time_ms ASC, playe
 
 -- 3. Row Level Security (RLS) 활성화
 ALTER TABLE public.pushpush_leaderboard ENABLE ROW LEVEL SECURITY;
+
+-- 4. 익명 읽기(Select) 허용 정책 추가
+CREATE POLICY "Allow public read access" 
+ON public.pushpush_leaderboard
+FOR SELECT 
+USING (true);
+
+-- 5. 익명 쓰기(Insert/Update/Delete) 허용 정책 추가
+CREATE POLICY "Allow public insert and update" 
+ON public.pushpush_leaderboard
+FOR ALL 
+USING (true)
+WITH CHECK (true);
