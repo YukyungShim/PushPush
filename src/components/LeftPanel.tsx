@@ -16,11 +16,12 @@ interface LeftPanelProps {
 }
 
 const PHASES: { label: string; key: PhaseType | 'ALL' }[] = [
-  { label: 'ALL', key: 'ALL' },
-  { label: 'TUTORIAL', key: 'Tutorial' },
-  { label: 'STAGE 6-15', key: 'Beginner' },
-  { label: 'ADVANCED', key: 'Advanced' },
-  { label: 'CLASSIC', key: 'Classic' },
+  { label: 'ALL (40)', key: 'ALL' },
+  { label: 'TUTORIAL (1-5)', key: 'Tutorial' },
+  { label: 'BEGINNER (6-15)', key: 'Beginner' },
+  { label: 'ADVANCED (16-20)', key: 'Advanced' },
+  { label: 'EXPERT (21-30)', key: 'Expert' },
+  { label: 'MASTER (31-40)', key: 'Master' },
 ];
 
 export const LeftPanel: React.FC<LeftPanelProps> = ({
@@ -121,7 +122,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         </div>
 
         {/* 5-Column Grid */}
-        <div className="grid grid-cols-5 gap-1 max-h-40 overflow-y-auto pr-1">
+        <div className="grid grid-cols-5 gap-1 max-h-52 overflow-y-auto pr-1">
           {filteredStages.map((st) => {
             const isSelected = st.id === currentStage.id;
             const rec = stageRecords[st.id];

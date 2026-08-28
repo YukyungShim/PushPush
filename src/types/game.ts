@@ -7,7 +7,7 @@ export interface Position {
   y: number;
 }
 
-export type PhaseType = 'Tutorial' | 'Beginner' | 'Advanced' | 'Classic' | 'Custom';
+export type PhaseType = 'Tutorial' | 'Beginner' | 'Advanced' | 'Expert' | 'Master' | 'Classic' | 'Custom';
 
 export interface StageData {
   id: number;
