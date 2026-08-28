@@ -3,7 +3,7 @@
 import React from 'react';
 import { Music, Volume2, VolumeX, Edit3, Database, Tv } from 'lucide-react';
 import { soundManager } from '../utils/sound';
-import { isSupabaseConfigured } from '../lib/supabase';
+import { getIsSupabaseConnected } from '../lib/supabase';
 
 interface HeaderProps {
   soundEnabled: boolean;
@@ -84,14 +84,14 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Database
             size={13}
-            className={isSupabaseConfigured ? 'text-emerald-400' : 'text-amber-400'}
+            className={getIsSupabaseConnected() ? 'text-emerald-400' : 'text-amber-400'}
           />
           <span
             className={`text-[11px] font-mono font-bold ${
-              isSupabaseConfigured ? 'text-emerald-300' : 'text-amber-300'
+              getIsSupabaseConnected() ? 'text-emerald-300' : 'text-amber-300'
             }`}
           >
-            {isSupabaseConfigured ? 'DB CONNECTED' : 'LOCAL DB'}
+            {getIsSupabaseConnected() ? 'DB CONNECTED' : 'LOCAL DB'}
           </span>
         </button>
 

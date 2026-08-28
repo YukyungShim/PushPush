@@ -1,18 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 import { LeaderboardEntry } from '../types/game';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+// Client-side environment variables (optional for direct client SDK calls)
+const clientSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const clientSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-export const isSupabaseConfigured = Boolean(
-  supabaseUrl &&
-    supabaseAnonKey &&
-    supabaseUrl !== 'https://your-project.supabase.co' &&
-    !supabaseUrl.includes('your-project')
+export const isClientSupabaseConfigured = Boolean(
+  clientSupabaseUrl &&
+    clientSupabaseAnonKey &&
+    clientSupabaseUrl !== 'https://your-project.supabase.co' &&
+    !clientSupabaseUrl.includes('your-project')
 );
 
-export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey)
+export const supabaseClient = isClientSupabaseConfigured
+  ? createClient(clientSupabaseUrl, clientSupabaseAnonKey)
   : null;
 
 // Map game stage ID to Supabase DB stage_level (must satisfy CHECK stage_level > 0)
@@ -68,43 +69,73 @@ function saveLocalLeaderboard(data: Record<number, LeaderboardEntry[]>) {
   }
 }
 
-// Fetch Stage Leaderboard from Supabase `public.pushpush_leaderboard`
-export async function fetchStageLeaderboard(stageId: number): Promise<LeaderboardEntry[]> {
+// Track if online Supabase backend is confirmed working
+let isBackendConnected = isClientSupabaseConfigured;
+
+export function getIsSupabaseConnected(): boolean {
+  return isBackendConnected;
+}
+
+// Fetch Stage Leaderboard from API route or Supabase SDK
+export async function fetchStageLeaderboard(stageId: number): Promise<{
+  entries: LeaderboardEntry[];
+  isConnected: boolean;
+}> {
   const dbStageLevel = getDbStageLevel(stageId);
 
-  if (isSupabaseConfigured && supabase) {
+  // 1. Try Next.js API Route (Supports SUPABASE_URL & SUPABASE_SERVICE_ROLE_KEY on Vercel)
+  try {
+    const res = await fetch(`/api/leaderboard?stage_level=${dbStageLevel}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+
+    if (res.ok) {
+      const result = await res.json();
+      if (result.success && result.isConfigured && Array.isArray(result.data)) {
+        isBackendConnected = true;
+        return { entries: result.data, isConnected: true };
+      }
+    }
+  } catch {
+    // API route network error, proceed to fallback
+  }
+
+  // 2. Direct Supabase Client fallback (if client env vars are present)
+  if (isClientSupabaseConfigured && supabaseClient) {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('pushpush_leaderboard')
         .select('*')
         .eq('stage_level', dbStageLevel)
         .order('moves', { ascending: true })
         .order('clear_time_ms', { ascending: true })
         .order('played_at', { ascending: true })
-        .limit(10);
+        .limit(20);
 
       if (!error && data) {
-        return data as LeaderboardEntry[];
+        isBackendConnected = true;
+        return { entries: data as LeaderboardEntry[], isConnected: true };
       }
-      if (error) {
-        console.warn('Supabase query error, fallback to local:', error.message);
-      }
-    } catch (err) {
-      console.warn('Supabase network error, fallback to local:', err);
+    } catch {
+      // SDK error, fallback to local
     }
   }
 
-  // Fallback to local storage
+  // 3. Fallback to LocalStorage
   const localData = getLocalLeaderboard();
   const list = localData[dbStageLevel] || [];
-  return [...list].sort((a, b) => {
+  const sorted = [...list].sort((a, b) => {
     if (a.moves !== b.moves) return a.moves - b.moves;
     if (a.clear_time_ms !== b.clear_time_ms) return a.clear_time_ms - b.clear_time_ms;
     return new Date(a.played_at).getTime() - new Date(b.played_at).getTime();
   });
+
+  return { entries: sorted, isConnected: isBackendConnected };
 }
 
-// Submit Stage Score to Supabase `public.pushpush_leaderboard` with UPSERT support
+// Submit Stage Score to API route or Supabase SDK with UNIQUE (name, stage_level) support
 export async function submitStageScore(
   stageId: number,
   playerName: string,
@@ -112,14 +143,35 @@ export async function submitStageScore(
   clearTimeMs: number
 ): Promise<{ success: boolean; error?: string; isBestRecord?: boolean }> {
   const dbStageLevel = getDbStageLevel(stageId);
-  // VARCHAR(12) limit as defined in SQL구문.txt
   const cleanName = playerName.trim().toUpperCase().slice(0, 12) || 'ANONYMOUS';
 
-  // 1. Submit to Supabase if available
-  if (isSupabaseConfigured && supabase) {
+  // 1. Submit via Next.js API Route (Backend handles SUPABASE_SERVICE_ROLE_KEY)
+  try {
+    const res = await fetch('/api/leaderboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: cleanName,
+        stage_level: dbStageLevel,
+        moves,
+        clear_time_ms: clearTimeMs,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        isBackendConnected = true;
+      }
+    }
+  } catch (err) {
+    console.warn('API Route submission failed, falling back to client/local:', err);
+  }
+
+  // 2. Direct Supabase Client fallback (if client env vars exist)
+  if (isClientSupabaseConfigured && supabaseClient) {
     try {
-      // Check existing record for UNIQUE (name, stage_level)
-      const { data: existing, error: selectError } = await supabase
+      const { data: existing, error: selectError } = await supabaseClient
         .from('pushpush_leaderboard')
         .select('*')
         .eq('name', cleanName)
@@ -127,13 +179,12 @@ export async function submitStageScore(
         .maybeSingle();
 
       if (!selectError && existing) {
-        // Only update if new score is better (fewer moves or same moves with faster time)
         const isBetter =
           moves < existing.moves ||
           (moves === existing.moves && clearTimeMs < existing.clear_time_ms);
 
         if (isBetter) {
-          const { error: updateError } = await supabase
+          await supabaseClient
             .from('pushpush_leaderboard')
             .update({
               moves,
@@ -142,35 +193,25 @@ export async function submitStageScore(
             })
             .eq('name', cleanName)
             .eq('stage_level', dbStageLevel);
-
-          if (updateError) {
-            console.warn('Supabase update warning:', updateError.message);
-          }
         }
       } else {
-        // Insert new entry
-        const { error: insertError } = await supabase
-          .from('pushpush_leaderboard')
-          .insert([
-            {
-              name: cleanName,
-              stage_level: dbStageLevel,
-              moves,
-              clear_time_ms: clearTimeMs,
-              played_at: new Date().toISOString(),
-            },
-          ]);
-
-        if (insertError) {
-          console.warn('Supabase insert warning:', insertError.message);
-        }
+        await supabaseClient.from('pushpush_leaderboard').insert([
+          {
+            name: cleanName,
+            stage_level: dbStageLevel,
+            moves,
+            clear_time_ms: clearTimeMs,
+            played_at: new Date().toISOString(),
+          },
+        ]);
       }
-    } catch (err: unknown) {
-      console.warn('Supabase request error:', err);
+      isBackendConnected = true;
+    } catch (err) {
+      console.warn('Client Supabase direct insert warning:', err);
     }
   }
 
-  // 2. Always update local storage for offline instant sync and UNIQUE (name, stage_level) logic
+  // 3. Always update LocalStorage for instant local sync
   try {
     const localData = getLocalLeaderboard();
     const currentList = localData[dbStageLevel] || [];

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { StageData, LeaderboardEntry, SolverResult, Direction } from '../types/game';
-import { fetchStageLeaderboard, isSupabaseConfigured } from '../lib/supabase';
+import { fetchStageLeaderboard } from '../lib/supabase';
 import { solveStage } from '../utils/solver';
 import { soundManager } from '../utils/sound';
 import {
@@ -32,6 +32,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   const [activeTab, setActiveTab] = useState<'LEADERBOARD' | 'SOLVER'>('LEADERBOARD');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState<boolean>(false);
+  const [isOnline, setIsOnline] = useState<boolean>(false);
 
   // Solver State
   const [solverResult, setSolverResult] = useState<SolverResult | null>(null);
@@ -42,8 +43,9 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   // Load Leaderboard
   const loadLeaderboard = useCallback(async () => {
     setLoadingLeaderboard(true);
-    const data = await fetchStageLeaderboard(currentStage.id);
-    setLeaderboard(data);
+    const { entries, isConnected } = await fetchStageLeaderboard(currentStage.id);
+    setLeaderboard(entries);
+    setIsOnline(isConnected);
     setLoadingLeaderboard(false);
   }, [currentStage.id]);
 
@@ -226,7 +228,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
           <div className="pt-2 border-t border-gray-800/80 flex items-center gap-1.5 text-[11px] font-mono text-cyan-400">
             <Zap size={13} className="text-yellow-400 fill-yellow-400" />
             <span>
-              {isSupabaseConfigured
+              {isOnline
                 ? '글로벌 리더보드 연동 완료'
                 : '로컬 스토리지 모드 실행 중'}
             </span>

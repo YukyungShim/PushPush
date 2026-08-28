@@ -1,18 +1,17 @@
 -- =========================================================
 -- Anti-Gravity PushPush (무중력 푸시푸시) Supabase Schema
--- (SQL구문.txt 기반 완전 동기화)
 -- =========================================================
 
 -- 1. 푸시푸시 랭킹 테이블 생성
 CREATE TABLE IF NOT EXISTS public.pushpush_leaderboard (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    -- 아케이드 감성에 맞춰 닉네임 길이 제한 유지 (최대 12자)
-    name VARCHAR(12) NOT NULL, 
-    -- 스테이지 구분 (1 이상)
+    -- 플레이어 닉네임 (12자 제한)
+    name VARCHAR(12) NOT NULL,
+    -- 스테이지 레벨 (1 이상)
     stage_level INTEGER NOT NULL CHECK (stage_level > 0),
-    -- 최소 이동 횟수 (0 미만 입력 방어)
+    -- 최소 이동 횟수 (0 이상)
     moves INTEGER NOT NULL CHECK (moves >= 0),
-    -- 클리어 시간 (밀리초 단위, 0 미만 입력 방어)
+    -- 클리어 시간 (밀리초 단위, 0 이상)
     clear_time_ms BIGINT NOT NULL CHECK (clear_time_ms >= 0),
     played_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     
@@ -22,39 +21,23 @@ CREATE TABLE IF NOT EXISTS public.pushpush_leaderboard (
 
 -- 2. 랭킹 조회를 위한 정렬 인덱스 생성
 -- 스테이지별로 이동 횟수(오름차순) -> 시간(오름차순) -> 달성일(오름차순) 순 정렬
-CREATE INDEX IF NOT EXISTS idx_pushpush_score_asc 
+CREATE INDEX IF NOT EXISTS idx_pushpush_rank 
 ON public.pushpush_leaderboard (stage_level, moves ASC, clear_time_ms ASC, played_at ASC);
 
 -- 3. Row Level Security (RLS) 활성화
 ALTER TABLE public.pushpush_leaderboard ENABLE ROW LEVEL SECURITY;
 
--- 4. RLS 정책: 누구나 랭킹 조회(SELECT) 가능
-CREATE POLICY "Public Read pushpush_leaderboard"
+-- 4. 읽기 정책 (누구나 랭킹 조회 가능)
+DROP POLICY IF EXISTS "Allow public read access" ON public.pushpush_leaderboard;
+CREATE POLICY "Allow public read access" 
 ON public.pushpush_leaderboard
-FOR SELECT
-TO public
+FOR SELECT 
 USING (true);
 
--- 5. RLS 정책: 누구나 점수 등록(INSERT) 및 최고기록 갱신(UPDATE) 가능
-CREATE POLICY "Public Insert pushpush_leaderboard"
+-- 5. 쓰기 정책 (신규 등록 및 점수 갱신 허용)
+DROP POLICY IF EXISTS "Allow public insert and update" ON public.pushpush_leaderboard;
+CREATE POLICY "Allow public insert and update" 
 ON public.pushpush_leaderboard
-FOR INSERT
-TO public
-WITH CHECK (
-    length(name) > 0 AND length(name) <= 12 AND
-    stage_level > 0 AND
-    moves >= 0 AND
-    clear_time_ms >= 0
-);
-
-CREATE POLICY "Public Update pushpush_leaderboard"
-ON public.pushpush_leaderboard
-FOR UPDATE
-TO public
+FOR ALL 
 USING (true)
-WITH CHECK (
-    length(name) > 0 AND length(name) <= 12 AND
-    stage_level > 0 AND
-    moves >= 0 AND
-    clear_time_ms >= 0
-);
+WITH CHECK (true);
