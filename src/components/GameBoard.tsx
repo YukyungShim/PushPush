@@ -831,9 +831,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           <div className="text-[10px] md:text-[11px] font-mono text-cyan-400 tracking-wider">
             ANYCALL LAND // 1999 CLASSIC
           </div>
-          <h1 className="text-xl md:text-2xl font-black font-mono neon-title-pink tracking-wider">
-            PUSHPUSH II
-          </h1>
+          <div className="flex items-baseline gap-2">
+            <h1 className="text-xl md:text-2xl font-black font-mono neon-title-pink tracking-wider">
+              PUSH PUSH
+            </h1>
+            <span className="text-[10px] md:text-[11px] font-mono text-gray-400 tracking-wider">
+              made by Yukyung, SHim
+            </span>
+          </div>
         </div>
 
         <div className="flex flex-col items-end">
