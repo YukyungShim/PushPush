@@ -251,7 +251,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
           {!solverResult ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 py-6">
               <p className="text-xs text-gray-400 font-mono">
-                무중력 관성 경로를 계산하여 최단 클리어 해법을 찾습니다.
+                모든 이동 경로를 탐색하여 최단 클리어 해법을 찾습니다.
               </p>
               <button
                 onClick={handleSolve}

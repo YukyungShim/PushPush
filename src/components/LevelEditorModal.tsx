@@ -178,7 +178,7 @@ export const LevelEditorModal: React.FC<LevelEditorModalProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const AI_SYSTEM_PROMPT = `당신은 전문 퍼즐 게임 레벨 디자이너입니다. '무중력 관성 이동(밀면 벽에 닿을 때까지 미끄러짐)' 규칙이 적용된 2D 그리드 기반의 소코반 맵을 생성해야 합니다.
+  const AI_SYSTEM_PROMPT = `당신은 전문 퍼즐 게임 레벨 디자이너입니다. '정통 푸시푸시 1칸 이동(공을 밀면 정확히 1칸 전진, 공 뒤에 벽이나 다른 공이 있으면 밀 수 없음)' 규칙이 적용된 2D 그리드 기반의 소코반 맵을 생성해야 합니다.
 맵의 기호:
 - '.' : 빈 공간
 - '#' : 벽
@@ -404,7 +404,7 @@ export const LevelEditorModal: React.FC<LevelEditorModalProps> = ({
           <div className="flex flex-col gap-4 text-xs font-mono">
             <div className="bg-fuchsia-950/30 border border-fuchsia-500/30 p-3.5 rounded-xl text-fuchsia-200 leading-relaxed">
               <p className="font-bold mb-1">💡 프롬프트 지침 (prompt.txt 기반)</p>
-              아래 지시문을 복사하여 LLM(ChatGPT, Gemini 등)에게 전달하면 무중력 관성 규칙에 맞춘 새로운 스테이지를 생성할 수 있습니다. 생성된 텍스트 맵을 상단 '불러오기'에 붙여넣어 바로 플레이해보세요!
+              아래 지시문을 복사하여 LLM(ChatGPT, Gemini 등)에게 전달하면 푸시푸시 1칸 이동 규칙에 맞춘 새로운 스테이지를 생성할 수 있습니다. 생성된 텍스트 맵을 상단 '불러오기'에 붙여넣어 바로 플레이해보세요!
             </div>
 
             {/* System Prompt Box */}
